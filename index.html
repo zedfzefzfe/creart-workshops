@@ -3,6 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2383779815693476');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2383779815693476&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 <title>Crea'rt Workshops · Atelier Bougies</title>
@@ -906,6 +923,12 @@ document.querySelectorAll('.vt video').forEach(v => v.addEventListener('play', (
   const a = document.getElementById('atelierVideo'); if (a) a.muted = true;
 }));
 
+// Meta Pixel: Contact event on every WhatsApp link (floating button, thank-you button, any wa.me / api.whatsapp.com link)
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href*="wa.me"], a[href*="api.whatsapp.com"]');
+  if (a && typeof fbq === 'function') { fbq('track', 'Contact'); }
+}, true);
+
 // Form
 const form = document.getElementById('regForm');
 function setErr(input, msg){
@@ -931,7 +954,9 @@ form.addEventListener('submit', e => {
       emailjs.send(ej.serviceId, ej.templateId, {
         name: name, phone: phone, city: city, message: msg || '-',
         language: LANG, date: new Date().toLocaleString('fr-FR', {timeZone: 'Africa/Casablanca'})
-      }, {publicKey: ej.publicKey}).catch(err => console.warn('EmailJS', err));
+      }, {publicKey: ej.publicKey}).then(function () {
+        if (typeof fbq === 'function') { fbq('track', 'Lead', { content_name: 'Atelier Bougies Casa 17 Oct' }); }
+      }, function (err) { console.warn('EmailJS', err); });
     } catch (err) { console.warn('EmailJS', err); }
   }
   document.getElementById('t-name').textContent = name.split(' ')[0];
