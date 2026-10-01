@@ -309,7 +309,7 @@ section{padding-block:72px}
 .bk{display:grid;gap:28px;background:#fbf7f0;border:1px solid var(--line-wax);padding:28px 20px;box-shadow:0 40px 80px -40px rgba(0,0,0,.8)}
 @media (min-width:600px){.bk{padding:40px}}
 @media (min-width:960px){.bk{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:48px;padding:48px}}
-.bk-form{margin-top:28px}
+.bk-form{margin-top:28px;scroll-margin-top:16px}
 @media (max-width:959px){.bk-main{display:contents}.bk-head{order:0}.bk-aside{order:1}.bk-form{order:2;margin-top:0}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .field{position:relative;margin-bottom:14px}
@@ -926,6 +926,20 @@ document.querySelectorAll('.vt video').forEach(v => v.addEventListener('play', (
   document.querySelectorAll('.vt video').forEach(o => { if (o !== v) o.pause(); });
   const a = document.getElementById('atelierVideo'); if (a) a.muted = true;
 }));
+
+// Mobile: booking links scroll to the form fields (the workshop details sit above them on small screens)
+document.addEventListener('click', function (e) {
+  const a = e.target.closest && e.target.closest('a[href="#reserver"]');
+  if (!a || window.innerWidth >= 960) return;
+  const f = document.querySelector('.bk-form');
+  if (!f) return;
+  e.preventDefault();
+  const card = f.closest('.bk');
+  if (card) { card.classList.remove('pre'); card.classList.add('shown'); card.style.transitionDelay = '0ms'; }
+  const top = f.getBoundingClientRect().top + window.scrollY - 16 - (card && getComputedStyle(card).transform !== 'none' ? new DOMMatrix(getComputedStyle(card).transform).m42 : 0);
+  window.scrollTo({top: top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+  try { history.replaceState(null, '', '#reserver'); } catch (_) {}
+});
 
 // Floating booking button: hidden while the booking form is on screen
 (function(){
