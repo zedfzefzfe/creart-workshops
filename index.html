@@ -962,6 +962,69 @@ const CONFIG = {
 };
 /* ============================= */
 
+/* ====== VILLE : une seule page, deux liens ======
+   Casablanca : ...vercel.app/            (ou /?ville=casa)
+   Tanger     : ...vercel.app/?ville=tanger
+   La ville est fixée par le LIEN (pas saisie par la cliente) : adresse, date,
+   étiquette CRM (colonne "atelier") et Pixel suivent automatiquement.          */
+const CITY = {
+  casa: {
+    // Casa = valeurs par défaut déjà dans la page. Change seulement la date si besoin.
+    atelier: "Bougies Casa 31 Oct",   // ✏️ étiquette CRM + Pixel (mets la vraie date Casa)
+    label: "Casa"
+  },
+  tanger: (function () {
+    /* ✏️ À REMPLIR pour Tanger (3 lignes) : */
+    const VENUE_FR = "Adresse à confirmer, Tanger",
+          VENUE_AR = "العنوان قريباً، طنجة",
+          VENUE_EN = "Address TBC, Tangier";
+    const DATE_FR = "Date à confirmer", DATE_AR = "التاريخ قريباً", DATE_EN = "Date TBC";
+    const ATELIER = "Bougies Tanger";  // ✏️ ajoute la date : "Bougies Tanger 22 Nov"
+    /* ---- (rien à changer en dessous) ---- */
+    return {
+      atelier: ATELIER, label: "Tanger",
+      i18n: {
+        fr: { "nav.tag":"Ateliers créatifs · Tanger","nav.where":"Tanger",
+          "hero.eyebrow":"Formation professionnelle · Tanger","hero.date":DATE_FR+" · "+VENUE_FR,
+          "f.dateV":DATE_FR,"f.placeV":"Tanger","form.when":DATE_FR+" · "+VENUE_FR,
+          "fi.dateV":DATE_FR+" · 10h – 19h","fi.placeV":VENUE_FR,"ft.addr":VENUE_FR,
+          "ft.nextD":DATE_FR+" · 1000 DH tout inclus",
+          "wa.msg":"Bonjour, je souhaite réserver ma place pour l'atelier bougies de Tanger." },
+        ar: { "nav.tag":"ورشات إبداعية · طنجة","nav.where":"طنجة",
+          "hero.eyebrow":"تكوين احترافي · طنجة","hero.date":DATE_AR+" · "+VENUE_AR,
+          "f.dateV":DATE_AR,"f.placeV":"طنجة","form.when":DATE_AR+" · "+VENUE_AR,
+          "fi.dateV":DATE_AR+" · 10ص – 7م","fi.placeV":VENUE_AR,"ft.addr":VENUE_AR,
+          "ft.nextD":DATE_AR+" · 1000 درهم شامل كل شيء",
+          "wa.msg":"السلام، بغيت نحجز بلاصتي فورشة الشموع ديال طنجة." },
+        en: { "nav.tag":"Creative workshops · Tangier","nav.where":"Tangier",
+          "hero.eyebrow":"Professional training · Tangier","hero.date":DATE_EN+" · "+VENUE_EN,
+          "f.dateV":DATE_EN,"f.placeV":"Tangier","form.when":DATE_EN+" · "+VENUE_EN,
+          "fi.dateV":DATE_EN+" · 10am – 7pm","fi.placeV":VENUE_EN,"ft.addr":VENUE_EN,
+          "ft.nextD":DATE_EN+" · 1000 MAD all included",
+          "wa.msg":"Hello, I'd like to book my spot for the Tangier candle workshop." }
+      }
+    };
+  })()
+};
+function resolveCity(){
+  try {
+    const q = new URLSearchParams(location.search);
+    const p = (q.get('ville') || q.get('city') || '').trim().toLowerCase();
+    if (p.indexOf('tang') === 0 || p.indexOf('طنج') === 0) return 'tanger';
+  } catch(e){}
+  return 'casa';
+}
+const CURRENT_CITY = resolveCity();
+(function applyCity(){
+  const cfg = CITY[CURRENT_CITY] || CITY.casa;
+  CONFIG.supabase.atelier = cfg.atelier;
+  CONFIG.supabase.villeLabel = cfg.label;          // "Casa" / "Tanger" -> CRM
+  if (cfg.i18n){
+    for (const lng in cfg.i18n){ if (I18N[lng]) Object.assign(I18N[lng], cfg.i18n[lng]); }
+  }
+})();
+/* ================================================= */
+
 document.querySelectorAll('.wa-display').forEach(el => el.textContent = CONFIG.whatsappDisplay);
 setLang(detectLang(), false);
 document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang, true)));
@@ -1039,10 +1102,19 @@ function saveLeadToCRM(id, nom, telephone, ville){
   return whenSupabase().then(function (ready) {
     if (!ready) { console.warn('CRM: supabase-js not loaded'); return false; }
     if (!window._crm) window._crm = window.supabase.createClient(sb.url, sb.anonKey, { auth: { persistSession: false } });
-    const row = { nom: nom, telephone: telephone, ville: ville, source: 'landing', atelier: sb.atelier };
+    const row = { nom: nom, telephone: telephone, ville: ville, source: 'landing', atelier: sb.atelier, ville_atelier: sb.villeLabel };
     if (id) row.id = id;
-    return window._crm.from('leads').insert(row)
-      .then(function (res) { if (res.error) { console.warn('CRM', res.error); return false; } return true; });
+    return window._crm.from('leads').insert(row).then(function (res) {
+      if (!res.error) return true;
+      // Si la colonne "ville_atelier" n'existe pas encore dans Supabase, on réessaie sans elle
+      // (la ville reste de toute façon lisible dans la colonne "atelier"). Aucun lead n'est perdu.
+      if (row.ville_atelier !== undefined) {
+        const r2 = Object.assign({}, row); delete r2.ville_atelier;
+        return window._crm.from('leads').insert(r2)
+          .then(function (res2) { if (res2.error) { console.warn('CRM', res2.error); return false; } return true; });
+      }
+      console.warn('CRM', res.error); return false;
+    });
   }).catch(function (err) { console.warn('CRM', err); return false; });
 }
 // Sets contact_pref on the lead just saved (Supabase function set_contact_pref). Waits for the insert;
@@ -1102,7 +1174,7 @@ form.addEventListener('submit', e => {
         name: name, phone: phone, city: city, message: msg || '-',
         language: LANG, date: new Date().toLocaleString('fr-FR', {timeZone: 'Africa/Casablanca'})
       }, {publicKey: ej.publicKey}).then(function () {
-        if (typeof fbq === 'function') { fbq('track', 'Lead', { content_name: 'Atelier Bougies Casa 31 Oct' }); }
+        if (typeof fbq === 'function') { fbq('track', 'Lead', { content_name: 'Atelier ' + CONFIG.supabase.atelier }); }
       }, function (err) { console.warn('EmailJS', err); });
     } catch (err) { console.warn('EmailJS', err); }
   }
