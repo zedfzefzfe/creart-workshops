@@ -1176,7 +1176,11 @@ form.addEventListener('submit', e => {
   if (window.emailjs && ej.publicKey && ej.serviceId && ej.templateId) {
     try {
       emailjs.send(ej.serviceId, ej.templateId, {
-        name: name, phone: phone, city: city, message: msg || '-',
+        name: name, phone: phone,
+        // ville de l'atelier (fixée par le lien) en tête, puis la ville tapée par la cliente
+        city: String(CONFIG.supabase.villeLabel || 'Casa').toUpperCase() + ' · ' + city,
+        atelier: CONFIG.supabase.atelier, ville_atelier: CONFIG.supabase.villeLabel,
+        message: msg || '-',
         language: LANG, date: new Date().toLocaleString('fr-FR', {timeZone: 'Africa/Casablanca'})
       }, {publicKey: ej.publicKey}).then(function () {
         if (typeof fbq === 'function') { fbq('track', 'Lead', { content_name: 'Atelier ' + CONFIG.supabase.atelier }); }
