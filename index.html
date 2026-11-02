@@ -1180,6 +1180,7 @@ form.addEventListener('submit', e => {
         // ville de l'atelier (fixée par le lien) en tête, puis la ville tapée par la cliente
         city: String(CONFIG.supabase.villeLabel || 'Casa').toUpperCase() + ' · ' + city,
         atelier: CONFIG.supabase.atelier, ville_atelier: CONFIG.supabase.villeLabel,
+        title: 'Atelier ' + CONFIG.supabase.atelier,   // objet de l'email : "Atelier Bougies Tanger 21 Nov"
         message: msg || '-',
         language: LANG, date: new Date().toLocaleString('fr-FR', {timeZone: 'Africa/Casablanca'})
       }, {publicKey: ej.publicKey}).then(function () {
