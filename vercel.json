@@ -1,5 +1,7 @@
 {
   "headers": [
-    { "source": "/creart-workshops.vcf", "headers": [{ "key": "Content-Type", "value": "text/vcard; charset=utf-8" }] }
+    { "source": "/creart-workshops.vcf", "headers": [{ "key": "Content-Type", "value": "text/vcard; charset=utf-8" }] },
+    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }] },
+    { "source": "/(.*)\\.(jpg|jpeg|png|webp|mp4|css|js|woff2)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }] }
   ]
 }
