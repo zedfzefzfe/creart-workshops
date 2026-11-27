@@ -691,7 +691,7 @@ Une question, un besoin particulier…" data-i18n-ph="ph.msg"></textarea></div>
             <video id="welcomeVid" class="welcome-vid" playsinline muted preload="none" poster="welcome-poster.jpg" controls>
               <source data-src="welcome.mp4" type="video/mp4">
             </video>
-            <button type="button" class="welcome-sound" id="welcomeSound" data-i18n="ty.sound">🔊 Activer le son</button>
+            <button type="button" class="welcome-sound" id="welcomeSound" data-i18n="ty.sound" hidden>🔊 Activer le son</button>
           </div>
         </div>
         <p data-i18n="ty.p">Dernière étape : envoyez votre demande sur WhatsApp. Nous vous recontactons très vite pour confirmer votre place.</p>
@@ -714,15 +714,8 @@ Une question, un besoin particulier…" data-i18n-ph="ph.msg"></textarea></div>
             <button type="button" data-pref="WhatsApp" data-i18n="pref.wa">WhatsApp</button>
           </div>
           </div>
-          <!-- Step 2 (after a choice): thank you + save our number. The contact card is creart-workshops.vcf -->
-          <div class="pref-s2" hidden>
-            <p class="pref-q"><span data-i18n="pref.ty">Merci</span> <span id="prefName"></span><span data-i18n="ty.bang"> !</span> 🌸</p>
-            <p class="pref-p" data-i18n="pref.save">Enregistrez notre numéro pour savoir que c'est nous quand nous vous appelons.</p>
-            <div class="pref-opts">
-              <a class="pref-save" href="creart-workshops.vcf" data-i18n="pref.saveBtn">Enregistrer notre numéro</a>
-              <button type="button" class="pref-done" data-i18n="pref.done">Continuer</button>
-            </div>
-          </div>
+          <!-- contact-preference step 2 removed: leads now go straight to the welcome video -->
+          <span id="prefName" hidden></span>
         </div>
       </dialog>
         </div>
@@ -1151,15 +1144,14 @@ function saveContactPref(saved, id, pref){
 // all lead to the normal thank-you message.
 function askContactPref(id, saved, firstName){
   const dlg = document.getElementById('prefModal');
-  document.getElementById('prefName').textContent = firstName;
+  const _pn = document.getElementById('prefName'); if (_pn) _pn.textContent = firstName;
   const thanks = () => { document.getElementById('thanks').hidden = false; playWelcome(); };
   if (!dlg || typeof dlg.showModal !== 'function') return thanks();
   dlg.querySelectorAll('[data-pref]').forEach(b => { b.onclick = () => {
     saveContactPref(saved, id, b.dataset.pref);
-    dlg.querySelector('.pref-s1').hidden = true; dlg.querySelector('.pref-s2').hidden = false;   // step 2: save our number
-    dlg.querySelector('.pref-save').focus();
+    thanks();                       // straight to the thank-you + welcome video (plays with sound: we're inside the tap)
+    try { dlg.close(); } catch(e){}
   }; });
-  dlg.querySelector('.pref-done').onclick = () => dlg.close();
   dlg.querySelector('.pref-x').onclick = () => dlg.close();
   dlg.onclick = e => { if (e.target === dlg) dlg.close(); };   // click outside the card
   dlg.addEventListener('close', thanks, { once: true });     // also Esc / back
@@ -1213,10 +1205,18 @@ form.addEventListener('submit', e => {
 // so it has zero impact on the landing page's initial load. Autoplays muted; a tap enables sound.
 function playWelcome(){
   const v = document.getElementById('welcomeVid'); if (!v) return;
+  if (v.dataset.started) return; v.dataset.started = '1';   // run once
   const s = v.querySelector('source[data-src]');
   if (s && !s.getAttribute('src')){ s.src = s.dataset.src; v.load(); }
-  v.muted = true;
-  const p = v.play(); if (p && p.catch) p.catch(function(){});
+  const btn = document.getElementById('welcomeSound');
+  // Play WITH sound — we are inside the contact-choice tap, so the browser allows it.
+  v.muted = false; try { v.volume = 1; } catch(e){}
+  const p = v.play();
+  if (p && p.catch) p.catch(function(){
+    // Browser blocked sound-on autoplay: fall back to muted playback + the "sound" button.
+    v.muted = true; if (btn) btn.hidden = false;
+    const p2 = v.play(); if (p2 && p2.catch) p2.catch(function(){});
+  });
 }
 (function(){
   const v = document.getElementById('welcomeVid'), btn = document.getElementById('welcomeSound');
